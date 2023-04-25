@@ -1,7 +1,7 @@
 {
   "name": "@dstanesc/shared-tree-map",
   "description": "Simple alpha shared tree instantiation for testing",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "homepage": "https://github.com/dstanesc/shared-tree-map",
   "repository": "https://github.com/dstanesc/shared-tree-map",
   "license": "MIT",
@@ -33,6 +33,7 @@
     "@fluid-experimental/tree2": ">=2.0.0-internal.4.1.0 <2.0.0-internal.5.0.0",
     "@fluidframework/azure-client": ">=2.0.0-internal.4.1.0 <2.0.0-internal.5.0.0",
     "@fluidframework/datastore-definitions": ">=2.0.0-internal.4.1.0 <2.0.0-internal.5.0.0",
+    "@fluidframework/container-loader": ">=2.0.0-internal.4.1.0 <2.0.0-internal.5.0.0",
     "@fluidframework/fluid-static": ">=2.0.0-internal.4.1.0 <2.0.0-internal.5.0.0",
     "@fluidframework/test-client-utils": ">=2.0.0-internal.4.1.0 <2.0.0-internal.5.0.0",
     "@fluidframework/test-runtime-utils": ">=2.0.0-internal.4.1.0 <2.0.0-internal.5.0.0",

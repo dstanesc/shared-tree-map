@@ -11,6 +11,7 @@ import {
   ITelemetryBaseLogger,
 } from "@fluidframework/azure-client";
 import { IFluidContainer } from "@fluidframework/fluid-static";
+import { ConnectionState } from "@fluidframework/container-loader";
 
 class MySharedTree {
   public static getFactory(): any {
@@ -110,6 +111,7 @@ export async function createSimpleWorkspace(
       containerId,
       containerSchema
     );
+    await waitForFullyLoaded(containerAndServices.container);
   }
   const sharedTree = containerAndServices.container.initialObjects
     .tree as ISharedTree;
@@ -121,4 +123,12 @@ export async function createSimpleWorkspace(
       containerAndServices.container.dispose();
     },
   };
+}
+
+async function waitForFullyLoaded(container: IFluidContainer) {
+  if (container.connectionState !== ConnectionState.Connected) {
+    await new Promise<void>((resolve) => {
+      container.once("connected", resolve);
+    });
+  }
 }
