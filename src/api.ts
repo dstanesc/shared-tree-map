@@ -105,11 +105,13 @@ export const EMPTY_TREE: ContextuallyTypedNodeData = {
   [contentField]: {},
 };
 
-export async function initWorkspace(containerId: string): Promise<Workspace> {
+export async function initWorkspace(
+  containerId: string | undefined
+): Promise<Workspace> {
   const workspace = await createSimpleWorkspace(containerId);
   const tree = workspace.tree;
   tree.storedSchema.update(fullSchemaData);
-  tree.root = EMPTY_TREE;
+  if (containerId === undefined) tree.root = EMPTY_TREE;
   return workspace;
 }
 
