@@ -1,13 +1,12 @@
 import {
   ContextuallyTypedNodeData,
+  ContextuallyTypedNodeDataObject,
   ISharedTreeView,
   SharedTreeFactory,
-} from "@fluid-experimental/tree2";
-import { AllowedUpdateType } from "@fluid-experimental/tree2/dist/core";
-import {
-  ContextuallyTypedNodeDataObject,
   typeNameSymbol,
-} from "@fluid-experimental/tree2/dist/feature-libraries";
+  AllowedUpdateType,
+} from "@fluid-experimental/tree2";
+
 import { contentField, contentSchema, fullSchemaData, initMap } from "../api";
 import { MockFluidDataStoreRuntime } from "@fluidframework/test-runtime-utils";
 import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
@@ -111,7 +110,7 @@ describe("shared-tree map", () => {
   });
 });
 
-export const EMPTY_TREE: ContextuallyTypedNodeData = {
+const EMPTY_TREE: ContextuallyTypedNodeData = {
   [typeNameSymbol]: contentSchema.name,
   [contentField]: {},
 };
@@ -127,12 +126,12 @@ function treeView(initialData: ContextuallyTypedNodeData): ISharedTreeView {
   const tree = factory.create(new MockFluidDataStoreRuntime(), "test");
   return tree.schematize({
     allowedSchemaModifications: AllowedUpdateType.None,
-    initialTree: EMPTY_TREE,
+    initialTree: initialData as any,
     schema: fullSchemaData,
   });
 }
 
-export const TEST_DATA: ContextuallyTypedNodeDataObject = {
+const TEST_DATA: ContextuallyTypedNodeData = {
   [typeNameSymbol]: contentSchema.name,
   [contentField]: {
     test: "test1",

@@ -4,8 +4,8 @@ import {
   ISharedTree,
   LocalFieldKey,
   SchemaAware,
+  SchemaBuilder,
   SharedTreeFactory,
-  TypedSchema,
   ValueSchema,
   brand,
   rootFieldKey,
@@ -16,32 +16,27 @@ import { SharedTreeMap } from "./interfaces";
 
 export const [contentField]: LocalFieldKey = brand("content");
 
-export const stringSchema = TypedSchema.tree("hex:String", {
-  value: ValueSchema.String,
-});
+const builder = new SchemaBuilder("10bc20fc-65e1-4f1d-99f2-cb5937306190");
 
-export const mapStringSchema = TypedSchema.tree("hex:Map<String>", {
-  extraLocalFields: TypedSchema.field(FieldKinds.optional, stringSchema),
+export const stringSchema = builder.primitive("hex:String", ValueSchema.String);
+
+export const mapStringSchema = builder.object("hex:Map<String>", {
+  extraLocalFields: SchemaBuilder.field(FieldKinds.optional, stringSchema),
   value: ValueSchema.Serializable,
 });
 
-export const contentSchema = TypedSchema.tree("hex:Content", {
+export const contentSchema = builder.object("hex:Content", {
   local: {
-    [contentField]: TypedSchema.field(FieldKinds.optional, mapStringSchema),
+    [contentField]: SchemaBuilder.field(FieldKinds.optional, mapStringSchema),
   },
 });
 
-export const rootContentSchema = TypedSchema.field(
+export const rootField = SchemaBuilder.field(
   FieldKinds.optional,
   contentSchema
 );
 
-export const fullSchemaData = SchemaAware.typedSchemaData(
-  [[rootFieldKey, rootContentSchema]],
-  stringSchema,
-  mapStringSchema,
-  contentSchema
-);
+export const fullSchemaData = builder.intoDocumentSchema(rootField);
 
 export interface DataBinder extends BatchBinder {}
 

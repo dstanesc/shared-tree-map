@@ -1,6 +1,5 @@
 import { DataBinder } from "./api";
 
-
 export interface SharedTreeMap {
   delete(key: string): void;
   forEach(callbackfn: (value: string, key: string) => void): void;
