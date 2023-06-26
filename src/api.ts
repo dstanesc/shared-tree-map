@@ -10,6 +10,17 @@ import {
   brand,
   rootFieldKey,
   typeNameSymbol,
+  FlushableBinderOptions,
+  ViewEvents,
+  createFlushableBinderOptions,
+  FlushableDataBinder,
+  InvalidationBinderEvents,
+  createDataBinderInvalidating,
+  BindingType,
+  BindSyntaxTree,
+  BindTree,
+  compileSyntaxTree,
+  InvalidationBindingContext,
 } from "@fluid-experimental/tree2";
 import { Workspace, createSimpleWorkspace } from "./workspace";
 import { SharedTreeMap } from "./interfaces";
@@ -45,12 +56,31 @@ export interface BatchBinder {
 }
 
 class SimpleBinder implements DataBinder {
-  constructor(public readonly sharedTree: ISharedTree) {}
+  dataBinder: FlushableDataBinder<InvalidationBinderEvents>;
+  constructor(public readonly sharedTree: ISharedTree) {
+    const options: FlushableBinderOptions<ViewEvents> =
+      createFlushableBinderOptions({
+        autoFlushPolicy: "afterBatch",
+        matchPolicy: "subtree",
+      });
+    this.dataBinder = createDataBinderInvalidating(
+      this.sharedTree.events,
+      options
+    );
+  }
   bindOnBatch(fn: () => void): () => void {
-    const unregister = this.sharedTree.events.on("afterBatch", () => {
-      fn();
-    });
-    return () => unregister();
+    const syntaxTree: BindSyntaxTree = { [contentField]: true };
+    const bindTree: BindTree = compileSyntaxTree(syntaxTree);
+    const root = this.sharedTree.context.root.getNode(0);
+    this.dataBinder.register(
+      root,
+      BindingType.Invalidation,
+      [bindTree],
+      (invalidStateContext: InvalidationBindingContext) => {
+        fn();
+      }
+    );
+    return () => this.dataBinder.unregisterAll();
   }
 }
 
