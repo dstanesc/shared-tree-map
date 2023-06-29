@@ -34,7 +34,7 @@ binder.bindOnInvalid(() => {
 Subscribe to changes using the direct binder. It is unsafe to read the shared map directly from the callback. It is recommended to use the buffering binder instead.
 
 ```ts
-const binder = sharedMap.getBufferingBinder();
+const binder = sharedMap.getDirectBinder();
 binder.bindOnChange(
   (key: string, value: string) => {
     localModel.set(key, value);
