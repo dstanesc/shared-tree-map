@@ -1,21 +1,82 @@
 # Shared Tree Map
 
-Minimal Fluid SharedTree DDS instantiation for testing purposes.
+Minimal Fluid SharedTree DDS instantiation for testing purposes. Includes data binding.
 
 ## Install
 
 ```
-npm install --save-dev @dstanesc/shared-tree-map
+npm install @dstanesc/shared-tree-map
 ```
 
 ## Usage
+
+Author data
 
 ```ts
 import { initMap } from "@dstanesc/shared-tree-map";
 const sharedMap = await initMap(mapId);
 sharedMap.set("key1", "abc");
 sharedMap.set("key2", "def");
+sharedMap.delete("key1");
 ```
+
+Subscribe to changes using the invalidation binder
+
+```ts
+import { initMap } from "@dstanesc/shared-tree-map";
+const sharedMap = await initMap(mapId);
+const binder = sharedMap.getInvalidationBinder();
+binder.bindOnInvalid(() => {
+  updateLocalModel(sharedMap.asMap());
+});
+```
+
+Subscribe to changes using the direct binder. It is unsafe to read the shared map directly from the callback. It is recommended to use the buffering binder instead.
+
+```ts
+const binder = sharedMap.getBufferingBinder();
+binder.bindOnChange(
+  (key: string, value: string) => {
+    localModel.set(key, value);
+  },
+  (key: string) => {
+    localModel.delete(key);
+  }
+);
+```
+
+Subscribe to changes using the buffering binder
+
+```ts
+const binder = sharedMap.getBufferingBinder();
+binder.bindOnChange(
+  (key: string, value: string) => {
+    localModel.set(key, value);
+  },
+  (key: string) => {
+    localModel.delete(key);
+  }
+);
+```
+
+Subscribe to changes using the batching binder
+
+```ts
+const binder = sharedMap.getBatchingBinder();
+binder.bindOnBatch((batch: MapOperation[]) => {
+  for (const op of batch) {
+    if (op.type === "insert") {
+      localModel.set(op.key, op.value);
+    } else if (op.type === "delete") {
+      localModel.delete(op.key);
+    }
+  }
+});
+```
+
+## Used By
+
+[Hello World](https://github.com/dstanesc/shared-tree-map-hello)
 
 ## Configure Fluid Service
 
@@ -26,9 +87,11 @@ If `frs` is opted for, set-up both `SECRET_FLUID_TENANT` and `SECRET_FLUID_TOKEN
 Example
 
 ```
+
 FLUID_MODE=frs
 SECRET_FLUID_TOKEN=xyz
 SECRET_FLUID_TENANT=xyz
+
 ```
 
 ## Build & Test

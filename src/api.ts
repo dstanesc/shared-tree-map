@@ -21,9 +21,28 @@ import {
   BindTree,
   compileSyntaxTree,
   InvalidationBindingContext,
+  OperationBinderEvents,
+  DataBinder,
+  createBinderOptions,
+  BinderOptions,
+  createDataBinderDirect,
+  InsertBindingContext,
+  toDownPath,
+  BindPath,
+  DownPath,
+  DeleteBindingContext,
+  createDataBinderBuffering,
+  BatchBindingContext,
+  VisitorBindingContext,
 } from "@fluid-experimental/tree2";
 import { Workspace, createSimpleWorkspace } from "./workspace";
-import { SharedTreeMap } from "./interfaces";
+import {
+  SharedTreeMap,
+  InvalidationBinder,
+  OperationBinder,
+  BatchedOperationBinder,
+  MapOperation,
+} from "./interfaces";
 
 export const [contentField]: LocalFieldKey = brand("content");
 
@@ -49,13 +68,7 @@ export const rootField = SchemaBuilder.field(
 
 export const fullSchemaData = builder.intoDocumentSchema(rootField);
 
-export interface DataBinder extends BatchBinder {}
-
-export interface BatchBinder {
-  bindOnBatch(fn: () => void): () => void;
-}
-
-class SimpleBinder implements DataBinder {
+class SimpleInvalidationBinder implements InvalidationBinder {
   dataBinder: FlushableDataBinder<InvalidationBinderEvents>;
   constructor(public readonly sharedTree: ISharedTree) {
     const options: FlushableBinderOptions<ViewEvents> =
@@ -68,7 +81,7 @@ class SimpleBinder implements DataBinder {
       options
     );
   }
-  bindOnBatch(fn: () => void): () => void {
+  bindOnInvalid(fn: () => void): () => void {
     const syntaxTree: BindSyntaxTree = { [contentField]: true };
     const bindTree: BindTree = compileSyntaxTree(syntaxTree);
     const root = this.sharedTree.context.root.getNode(0);
@@ -78,6 +91,131 @@ class SimpleBinder implements DataBinder {
       [bindTree],
       (invalidStateContext: InvalidationBindingContext) => {
         fn();
+      }
+    );
+    return () => this.dataBinder.unregisterAll();
+  }
+}
+
+class DirectBinder implements OperationBinder {
+  dataBinder: DataBinder<OperationBinderEvents>;
+  constructor(public readonly sharedTree: ISharedTree) {
+    const options: BinderOptions = createBinderOptions({
+      matchPolicy: "subtree",
+    });
+    this.dataBinder = createDataBinderDirect(sharedTree.events, options);
+  }
+  bindOnChange(
+    insertCall: (key: string, value: string) => void,
+    deleteCall: (key: string) => void
+  ): () => void {
+    const syntaxTree: BindSyntaxTree = { [contentField]: true };
+    const bindTree: BindTree = compileSyntaxTree(syntaxTree);
+    const root = this.sharedTree.context.root.getNode(0);
+    this.dataBinder.register(
+      root,
+      BindingType.Insert,
+      [bindTree],
+      (insertContext: InsertBindingContext) => {
+        const key: string = String(insertContext.path.parentField);
+        const value: string = (insertContext.content[0] as any).siblings[0]
+          .value;
+        insertCall(key, value);
+      }
+    );
+    this.dataBinder.register(
+      root,
+      BindingType.Delete,
+      [bindTree],
+      (deleteContext: DeleteBindingContext) => {
+        const key: string = String(deleteContext.path.parentField);
+        deleteCall(key);
+      }
+    );
+    return () => this.dataBinder.unregisterAll();
+  }
+}
+
+class BufferingBinder implements OperationBinder {
+  dataBinder: FlushableDataBinder<OperationBinderEvents>;
+  constructor(public readonly sharedTree: ISharedTree) {
+    const options: FlushableBinderOptions<ViewEvents> =
+      createFlushableBinderOptions({
+        matchPolicy: "subtree",
+        autoFlush: true,
+        autoFlushPolicy: "afterBatch",
+        sortFn: () => 0,
+        sortAnchorsFn: () => 0,
+      });
+    this.dataBinder = createDataBinderBuffering(sharedTree.events, options);
+  }
+  bindOnChange(
+    insertCall: (field: string, value: string) => void,
+    deleteCall: (field: string) => void
+  ): () => void {
+    const syntaxTree: BindSyntaxTree = { [contentField]: true };
+    const bindTree: BindTree = compileSyntaxTree(syntaxTree);
+    const root = this.sharedTree.context.root.getNode(0);
+    this.dataBinder.register(
+      root,
+      BindingType.Insert,
+      [bindTree],
+      (insertContext: InsertBindingContext) => {
+        const key: string = String(insertContext.path.parentField);
+        const value: string = (insertContext.content[0] as any).siblings[0]
+          .value;
+        insertCall(key, value);
+      }
+    );
+    this.dataBinder.register(
+      root,
+      BindingType.Delete,
+      [bindTree],
+      (deleteContext: DeleteBindingContext) => {
+        const key: string = String(deleteContext.path.parentField);
+        deleteCall(key);
+      }
+    );
+    return () => this.dataBinder.unregisterAll();
+  }
+}
+
+class BatchedBinder implements BatchedOperationBinder {
+  dataBinder: FlushableDataBinder<OperationBinderEvents>;
+  constructor(public readonly sharedTree: ISharedTree) {
+    const options: FlushableBinderOptions<ViewEvents> =
+      createFlushableBinderOptions({
+        matchPolicy: "subtree",
+        autoFlush: true,
+        autoFlushPolicy: "afterBatch",
+        sortFn: () => 0,
+        sortAnchorsFn: () => 0,
+      });
+    this.dataBinder = createDataBinderBuffering(sharedTree.events, options);
+  }
+  bindOnBatch(batchCall: (batch: MapOperation[]) => void): () => void {
+    const syntaxTree: BindSyntaxTree = { [contentField]: true };
+    const bindTree: BindTree = compileSyntaxTree(syntaxTree);
+    const root = this.sharedTree.context.root.getNode(0);
+    this.dataBinder.register(root, BindingType.Insert, [bindTree]);
+    this.dataBinder.register(root, BindingType.Delete, [bindTree]);
+    this.dataBinder.register(
+      root,
+      BindingType.Batch,
+      [bindTree],
+      (batchContext: BatchBindingContext) => {
+        const batch: MapOperation[] = [];
+        for (const event of batchContext.events) {
+          if (event.type === BindingType.Insert) {
+            const key: string = String(event.path.parentField);
+            const value: string = (event.content[0] as any).siblings[0].value;
+            batch.push({ type: "insert", key, value });
+          } else if (event.type === BindingType.Delete) {
+            const key: string = String(event.path.parentField);
+            batch.push({ type: "delete", key });
+          }
+        }
+        batchCall(batch);
       }
     );
     return () => this.dataBinder.unregisterAll();
@@ -120,7 +258,10 @@ export async function initMap(
       return this;
     },
     deleteMany: (keys: string[]) => deleteManyEntries(keys, workspace),
-    getBinder: () => new SimpleBinder(workspace.tree),
+    getInvalidationBinder: () => new SimpleInvalidationBinder(workspace.tree),
+    getDirectBinder: () => new DirectBinder(workspace.tree),
+    getBufferingBinder: () => new BufferingBinder(workspace.tree),
+    getBatchingBinder: () => new BatchedBinder(workspace.tree),
     dispose: () => workspace.dispose(),
   };
 }

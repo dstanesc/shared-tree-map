@@ -1,6 +1,5 @@
 import {
   ContextuallyTypedNodeData,
-  ContextuallyTypedNodeDataObject,
   ISharedTreeView,
   SharedTreeFactory,
   typeNameSymbol,
@@ -9,14 +8,13 @@ import {
 
 import { contentField, contentSchema, fullSchemaData, initMap } from "../api";
 import { MockFluidDataStoreRuntime } from "@fluidframework/test-runtime-utils";
-import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
-import { SharedTreeMap } from "../interfaces";
+import { MapOperation, SharedTreeMap } from "../interfaces";
 import { v4 as uuid } from "uuid";
 import * as assert from "assert";
 
 const DEMO_PAYLOAD = "large & complex payload";
 
-describe("shared-tree map", () => {
+describe("shared-tree map:: invalidation binder", () => {
   let sharedMap: SharedTreeMap = undefined;
   let localModel: Map<string, string> = new Map<string, string>();
   const updateLocalModel = (values: Map<string, string>) => {
@@ -27,8 +25,8 @@ describe("shared-tree map", () => {
   };
   const shareData = async (data: Map<string, string>) => {
     sharedMap = await initMap(undefined);
-    const binder = sharedMap.getBinder();
-    binder.bindOnBatch(() => {
+    const binder = sharedMap.getInvalidationBinder();
+    binder.bindOnInvalid(() => {
       updateLocalModel(sharedMap.asMap());
     });
     sharedMap.setMany(data);
@@ -51,35 +49,23 @@ describe("shared-tree map", () => {
   });
 
   test("Publish", async () => {
-    const data = new Map([[uuid(), DEMO_PAYLOAD]]);
+    const uqKey = uuid();
+    const data = new Map([[uqKey, DEMO_PAYLOAD]]);
     await shareData(data).then((mapId) => {
       sharedMap.forEach((value, key) => {
         console.log(`Reading published entry ok "${key} => ${value}"`);
       });
       assert.equal(1, localModel.size);
+      assert.equal(DEMO_PAYLOAD, localModel.get(uqKey));
     });
   });
 
   test("Delete", () => {
     const propertyTreeKeysBefore = sharedMap.keys();
-    console.log(
-      `Before delete, property tree keys ${JSON.stringify(
-        propertyTreeKeysBefore
-      )}`
-    );
     assert.equal(1, propertyTreeKeysBefore.length);
     deleteSharedData();
     const propertyTreeKeysAfter = sharedMap.keys();
-    console.log(
-      `After delete, property tree keys ${JSON.stringify(
-        propertyTreeKeysAfter
-      )}`
-    );
     assert.equal(0, propertyTreeKeysAfter.length);
-    console.log(`Done deleting data`);
-    sharedMap.forEach((value, key) => {
-      console.log(`This entry should not exist "${key} => ${value}"`);
-    });
     assert.equal(0, localModel.size);
   });
 
@@ -94,7 +80,6 @@ describe("shared-tree map", () => {
       }
     }
     const content = proxy[contentField];
-    debug(content);
     assert.equal(1, Object.keys(content).length);
   });
 
@@ -105,8 +90,172 @@ describe("shared-tree map", () => {
     content["key1"] = "value1";
     content["key2"] = "value2";
     content["key3"] = "value3";
-    debug(content);
     assert.equal(3, Object.keys(content).length);
+  });
+});
+
+describe("shared-tree map:: direct binder", () => {
+  let sharedMap: SharedTreeMap = undefined;
+  let localModel: Map<string, string> = new Map<string, string>();
+  const shareData = async (data: Map<string, string>) => {
+    sharedMap = await initMap(undefined);
+    const binder = sharedMap.getDirectBinder();
+    const insertCall = (key: string, value: string) => {
+      localModel.set(key, value);
+    };
+    const deleteCall = (key: string) => {
+      localModel.delete(key);
+    };
+    binder.bindOnChange(insertCall, deleteCall);
+    sharedMap.setMany(data);
+    return sharedMap.mapId();
+  };
+  const deleteSharedData = () => {
+    for (const key of localModel.keys()) {
+      sharedMap.delete(key);
+    }
+  };
+  const cleanUp = () => {
+    localModel = new Map<string, string>();
+  };
+  const dispose = () => {
+    sharedMap.dispose();
+  };
+  afterAll(() => {
+    cleanUp();
+    dispose();
+  });
+
+  test("Publish", async () => {
+    const uqKey = uuid();
+    const data = new Map([[uqKey, DEMO_PAYLOAD]]);
+    await shareData(data).then((mapId) => {
+      sharedMap.forEach((value, key) => {
+        console.log(`Reading published entry ok "${key} => ${value}"`);
+      });
+      assert.equal(1, localModel.size);
+      assert.equal(DEMO_PAYLOAD, localModel.get(uqKey));
+    });
+  });
+
+  test("Delete", () => {
+    const propertyTreeKeysBefore = sharedMap.keys();
+    assert.equal(1, propertyTreeKeysBefore.length);
+    deleteSharedData();
+    const propertyTreeKeysAfter = sharedMap.keys();
+    assert.equal(0, propertyTreeKeysAfter.length);
+    assert.equal(0, localModel.size);
+  });
+});
+
+describe("shared-tree map:: buffering binder", () => {
+  let sharedMap: SharedTreeMap = undefined;
+  let localModel: Map<string, string> = new Map<string, string>();
+  const shareData = async (data: Map<string, string>) => {
+    sharedMap = await initMap(undefined);
+    const binder = sharedMap.getBufferingBinder();
+    binder.bindOnChange(
+      (key: string, value: string) => {
+        localModel.set(key, value);
+      },
+      (key: string) => {
+        localModel.delete(key);
+      }
+    );
+    sharedMap.setMany(data);
+    return sharedMap.mapId();
+  };
+  const deleteSharedData = () => {
+    for (const key of localModel.keys()) {
+      sharedMap.delete(key);
+    }
+  };
+  const cleanUp = () => {
+    localModel = new Map<string, string>();
+  };
+  const dispose = () => {
+    sharedMap.dispose();
+  };
+  afterAll(() => {
+    cleanUp();
+    dispose();
+  });
+
+  test("Publish", async () => {
+    const uqKey = uuid();
+    const data = new Map([[uqKey, DEMO_PAYLOAD]]);
+    await shareData(data).then((mapId) => {
+      sharedMap.forEach((value, key) => {
+        console.log(`Reading published entry ok "${key} => ${value}"`);
+      });
+      assert.equal(1, localModel.size);
+      assert.equal(DEMO_PAYLOAD, localModel.get(uqKey));
+    });
+  });
+
+  test("Delete", () => {
+    const propertyTreeKeysBefore = sharedMap.keys();
+    assert.equal(1, propertyTreeKeysBefore.length);
+    deleteSharedData();
+    const propertyTreeKeysAfter = sharedMap.keys();
+    assert.equal(0, propertyTreeKeysAfter.length);
+    assert.equal(0, localModel.size);
+  });
+});
+
+describe("shared-tree map:: batched binder", () => {
+  let sharedMap: SharedTreeMap = undefined;
+  let localModel: Map<string, string> = new Map<string, string>();
+  const shareData = async (data: Map<string, string>) => {
+    sharedMap = await initMap(undefined);
+    const binder = sharedMap.getBatchingBinder();
+    binder.bindOnBatch((batch: MapOperation[]) => {
+      for (const op of batch) {
+        if (op.type === "insert") {
+          localModel.set(op.key, op.value);
+        } else if (op.type === "delete") {
+          localModel.delete(op.key);
+        }
+      }
+    });
+    sharedMap.setMany(data);
+    return sharedMap.mapId();
+  };
+  const deleteSharedData = () => {
+    for (const key of localModel.keys()) {
+      sharedMap.delete(key);
+    }
+  };
+  const cleanUp = () => {
+    localModel = new Map<string, string>();
+  };
+  const dispose = () => {
+    sharedMap.dispose();
+  };
+  afterAll(() => {
+    cleanUp();
+    dispose();
+  });
+
+  test("Publish", async () => {
+    const uqKey = uuid();
+    const data = new Map([[uqKey, DEMO_PAYLOAD]]);
+    await shareData(data).then((mapId) => {
+      sharedMap.forEach((value, key) => {
+        console.log(`Reading published entry ok "${key} => ${value}"`);
+      });
+      assert.equal(1, localModel.size);
+      assert.equal(DEMO_PAYLOAD, localModel.get(uqKey));
+    });
+  });
+
+  test("Delete", () => {
+    const propertyTreeKeysBefore = sharedMap.keys();
+    assert.equal(1, propertyTreeKeysBefore.length);
+    deleteSharedData();
+    const propertyTreeKeysAfter = sharedMap.keys();
+    assert.equal(0, propertyTreeKeysAfter.length);
+    assert.equal(0, localModel.size);
   });
 });
 
