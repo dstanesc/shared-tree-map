@@ -13,6 +13,7 @@ import { v4 as uuid } from "uuid";
 import * as assert from "assert";
 
 const DEMO_PAYLOAD = "large & complex payload";
+const DEMO_PAYLOAD_UPDATED = "updated large & complex payload";
 
 describe("shared-tree map:: invalidation binder", () => {
   let sharedMap: SharedTreeMap = undefined;
@@ -170,6 +171,11 @@ describe("shared-tree map:: buffering binder", () => {
       sharedMap.delete(key);
     }
   };
+  const updateSharedData = () => {
+    for (const key of sharedMap.keys()) {
+      sharedMap.set(key, DEMO_PAYLOAD_UPDATED);
+    }
+  };
   const cleanUp = () => {
     localModel = new Map<string, string>();
   };
@@ -191,6 +197,15 @@ describe("shared-tree map:: buffering binder", () => {
       assert.equal(1, localModel.size);
       assert.equal(DEMO_PAYLOAD, localModel.get(uqKey));
     });
+  });
+
+  test("Update", () => {
+    const propertyTreeKeysBefore = sharedMap.keys();
+    assert.equal(1, propertyTreeKeysBefore.length);
+    updateSharedData();
+    const propertyTreeKeysAfter = sharedMap.keys();
+    assert.equal(1, propertyTreeKeysAfter.length);
+    assert.equal(1, localModel.size);
   });
 
   test("Delete", () => {
@@ -226,6 +241,11 @@ describe("shared-tree map:: batched binder", () => {
       sharedMap.delete(key);
     }
   };
+  const updateSharedData = () => {
+    for (const key of sharedMap.keys()) {
+      sharedMap.set(key, DEMO_PAYLOAD_UPDATED);
+    }
+  };
   const cleanUp = () => {
     localModel = new Map<string, string>();
   };
@@ -247,6 +267,15 @@ describe("shared-tree map:: batched binder", () => {
       assert.equal(1, localModel.size);
       assert.equal(DEMO_PAYLOAD, localModel.get(uqKey));
     });
+  });
+
+  test("Update", () => {
+    const propertyTreeKeysBefore = sharedMap.keys();
+    assert.equal(1, propertyTreeKeysBefore.length);
+    updateSharedData();
+    const propertyTreeKeysAfter = sharedMap.keys();
+    assert.equal(1, propertyTreeKeysAfter.length);
+    assert.equal(1, localModel.size);
   });
 
   test("Delete", () => {

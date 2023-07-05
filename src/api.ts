@@ -144,7 +144,7 @@ class BufferingBinder implements OperationBinder {
         matchPolicy: "subtree",
         autoFlush: true,
         autoFlushPolicy: "afterBatch",
-        sortFn: () => 0,
+        sortFn: deletesFirst,
         sortAnchorsFn: () => 0,
       });
     this.dataBinder = createDataBinderBuffering(sharedTree.events, options);
@@ -188,7 +188,7 @@ class BatchedBinder implements BatchedOperationBinder {
         matchPolicy: "subtree",
         autoFlush: true,
         autoFlushPolicy: "afterBatch",
-        sortFn: () => 0,
+        sortFn: deletesFirst,
         sortAnchorsFn: () => 0,
       });
     this.dataBinder = createDataBinderBuffering(sharedTree.events, options);
@@ -220,6 +220,22 @@ class BatchedBinder implements BatchedOperationBinder {
     );
     return () => this.dataBinder.unregisterAll();
   }
+}
+
+function deletesFirst(
+  a: VisitorBindingContext,
+  b: VisitorBindingContext
+): number {
+  if (a.type === BindingType.Delete && b.type === BindingType.Delete) {
+    return 0;
+  }
+  if (a.type === BindingType.Delete) {
+    return -1;
+  }
+  if (b.type === BindingType.Delete) {
+    return 1;
+  }
+  return 0;
 }
 
 export type Entry = {
