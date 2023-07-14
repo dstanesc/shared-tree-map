@@ -43,6 +43,7 @@ import {
   BatchedOperationBinder,
   MapOperation,
 } from "./interfaces";
+import { ITelemetryBaseLogger } from "@fluidframework/azure-client";
 
 export const [contentField]: LocalFieldKey = brand("content");
 
@@ -244,9 +245,10 @@ export type Entry = {
 };
 
 export async function initMap(
-  mapId: string | undefined
+  mapId: string | undefined,
+  logger: ITelemetryBaseLogger | undefined = undefined
 ): Promise<SharedTreeMap> {
-  const workspace = await initWorkspace(mapId);
+  const workspace = await initWorkspace(mapId, logger);
   return {
     mapId: () => workspace.containerId,
     delete: (key: string) => deleteEntry(key, workspace),
@@ -288,9 +290,10 @@ export const EMPTY_TREE: ContextuallyTypedNodeData = {
 };
 
 export async function initWorkspace(
-  containerId: string | undefined
+  containerId: string | undefined,
+  logger: ITelemetryBaseLogger | undefined = undefined
 ): Promise<Workspace> {
-  const workspace = await createSimpleWorkspace(containerId);
+  const workspace = await createSimpleWorkspace(containerId, logger);
   const tree = workspace.tree;
   tree.storedSchema.update(fullSchemaData);
   if (containerId === undefined) tree.root = EMPTY_TREE;

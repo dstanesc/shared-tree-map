@@ -86,9 +86,21 @@ export function getClient(
 
 export class ReadyLogger implements ITelemetryBaseLogger {
   send(event: ITelemetryBaseEvent) {
-    console.log(
-      `Custom telemetry object array: ${JSON.stringify(event, null, 2)}`
-    );
+    console.log(`${JSON.stringify(event, null, 2)}`);
+  }
+}
+
+export class CrashHandler implements ITelemetryBaseLogger {
+  constructor(private readonly crashHandler: () => void) {}
+  send(event: ITelemetryBaseEvent) {
+    console.log(`${JSON.stringify(event, null, 2)}`);
+    if (event.category === "error" || event.category === "generic") {
+      if (event.canRetry === false) {
+        this.crashHandler();
+      } else if (event.attempts === 3) {
+        this.crashHandler();
+      }
+    }
   }
 }
 
