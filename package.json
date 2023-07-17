@@ -1,7 +1,7 @@
 {
   "name": "@dstanesc/shared-tree-map",
   "description": "Simple alpha shared tree instantiation for testing",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "homepage": "https://github.com/dstanesc/shared-tree-map",
   "repository": "https://github.com/dstanesc/shared-tree-map",
   "license": "MIT",

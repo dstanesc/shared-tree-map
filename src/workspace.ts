@@ -22,6 +22,8 @@ class MySharedTree {
   }
 }
 
+export type FluidMode = "frs" | "tiny";
+
 export interface Workspace {
   containerId: string | undefined;
   container: IFluidContainer;
@@ -31,10 +33,11 @@ export interface Workspace {
 
 export function getClient(
   userId: string,
-  logger: ITelemetryBaseLogger
+  logger: ITelemetryBaseLogger,
+  mode: FluidMode
 ): AzureClient {
-  console.log(`ENV.FLUID_MODE is ${process.env.FLUID_MODE}`);
-  switch (process.env.FLUID_MODE) {
+  console.log(`ENV.FLUID_MODE is ${mode}`);
+  switch (mode) {
     case "frs":
       const remoteConnectionConfig: AzureRemoteConnectionConfig = {
         type: "remote",
@@ -51,21 +54,6 @@ export function getClient(
       console.log(`Connecting to ${process.env.SECRET_FLUID_RELAY}`);
       return new AzureClient({
         connection: remoteConnectionConfig,
-        logger,
-      });
-    case "router": //guesswork, untested
-      const routerConnectionConfig: AzureRemoteConnectionConfig = {
-        type: "remote",
-        tenantId: "fluid",
-        tokenProvider: new InsecureTokenProvider(
-          "create-new-tenants-if-going-to-production",
-          { id: userId, name: userId }
-        ),
-        endpoint: "http://localhost:3003",
-      };
-      console.log(`Connecting to ${routerConnectionConfig.endpoint}`);
-      return new AzureClient({
-        connection: routerConnectionConfig,
         logger,
       });
     default:
@@ -106,14 +94,15 @@ export class CrashHandler implements ITelemetryBaseLogger {
 
 export async function createSimpleWorkspace(
   containerId: string | undefined,
-  logger: ITelemetryBaseLogger | undefined = undefined
+  logger: ITelemetryBaseLogger | undefined = undefined,
+  mode: FluidMode
 ): Promise<Workspace> {
   const createNew = containerId === undefined;
   const treeClass: any = MySharedTree;
   const containerSchema = {
     initialObjects: { tree: treeClass },
   };
-  const client = getClient("benchmark", logger);
+  const client = getClient("benchmark", logger, mode);
   let containerAndServices;
   if (createNew) {
     containerAndServices = await client.createContainer(containerSchema);

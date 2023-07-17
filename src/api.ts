@@ -35,7 +35,7 @@ import {
   BatchBindingContext,
   VisitorBindingContext,
 } from "@fluid-experimental/tree2";
-import { Workspace, createSimpleWorkspace } from "./workspace";
+import { Workspace, createSimpleWorkspace, FluidMode } from "./workspace";
 import {
   SharedTreeMap,
   InvalidationBinder,
@@ -246,9 +246,10 @@ export type Entry = {
 
 export async function initMap(
   mapId: string | undefined,
-  logger: ITelemetryBaseLogger | undefined = undefined
+  logger: ITelemetryBaseLogger | undefined = undefined,
+  fluidMode: FluidMode = process.env.FLUID_MODE as FluidMode
 ): Promise<SharedTreeMap> {
-  const workspace = await initWorkspace(mapId, logger);
+  const workspace = await initWorkspace(mapId, logger, fluidMode);
   return {
     mapId: () => workspace.containerId,
     delete: (key: string) => deleteEntry(key, workspace),
@@ -291,9 +292,10 @@ export const EMPTY_TREE: ContextuallyTypedNodeData = {
 
 export async function initWorkspace(
   containerId: string | undefined,
-  logger: ITelemetryBaseLogger | undefined = undefined
+  logger: ITelemetryBaseLogger | undefined = undefined,
+  fluidMode: FluidMode
 ): Promise<Workspace> {
-  const workspace = await createSimpleWorkspace(containerId, logger);
+  const workspace = await createSimpleWorkspace(containerId, logger, fluidMode);
   const tree = workspace.tree;
   tree.storedSchema.update(fullSchemaData);
   if (containerId === undefined) tree.root = EMPTY_TREE;
