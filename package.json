@@ -1,13 +1,13 @@
 {
   "name": "@dstanesc/shared-tree-map",
   "description": "Simple alpha shared tree instantiation for testing",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "homepage": "https://github.com/dstanesc/shared-tree-map",
   "repository": "https://github.com/dstanesc/shared-tree-map",
   "license": "MIT",
   "author": "Hexagon and contributors",
   "type": "module",
-  "main": "./dist/workspace.js",
+  "exports": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {

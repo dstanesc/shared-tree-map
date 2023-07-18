@@ -35,7 +35,7 @@ import {
   BatchBindingContext,
   VisitorBindingContext,
 } from "@fluid-experimental/tree2";
-import { Workspace, createSimpleWorkspace, FluidMode } from "./workspace";
+import { Workspace, createSimpleWorkspace, FluidMode } from "./workspace.js";
 import {
   SharedTreeMap,
   InvalidationBinder,
