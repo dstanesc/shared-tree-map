@@ -8,13 +8,19 @@ import {
 
 import { jest } from "@jest/globals";
 
-import { contentField, contentSchema, fullSchemaData, initMap } from "../api";
 import { MockFluidDataStoreRuntime } from "@fluidframework/test-runtime-utils";
 import { MapOperation, SharedTreeMap } from "../interfaces";
 import { v4 as uuid } from "uuid";
 import * as assert from "assert";
-import { ReadyLogger } from "../workspace";
-import { CrashHandler } from "..";
+
+import {
+  contentField,
+  contentSchema,
+  fullSchemaData,
+  initMap,
+  CrashHandler,
+  FluidMode,
+} from "..";
 
 const DEMO_PAYLOAD = "large & complex payload";
 const DEMO_PAYLOAD_UPDATED = "updated large & complex payload";
@@ -29,7 +35,7 @@ describe("shared-tree map:: invalidation binder", () => {
     }
   };
   const shareData = async (data: Map<string, string>) => {
-    sharedMap = await initMap(undefined);
+    sharedMap = await initMap(undefined, process.env.FLUID_MODE as FluidMode);
     const binder = sharedMap.getInvalidationBinder();
     binder.bindOnInvalid(() => {
       updateLocalModel(sharedMap.asMap());
@@ -103,7 +109,7 @@ describe("shared-tree map:: direct binder", () => {
   let sharedMap: SharedTreeMap = undefined;
   let localModel: Map<string, string> = new Map<string, string>();
   const shareData = async (data: Map<string, string>) => {
-    sharedMap = await initMap(undefined);
+    sharedMap = await initMap(undefined, process.env.FLUID_MODE as FluidMode);
     const binder = sharedMap.getDirectBinder();
     const insertCall = (key: string, value: string) => {
       localModel.set(key, value);
@@ -157,7 +163,7 @@ describe("shared-tree map:: buffering binder", () => {
   let sharedMap: SharedTreeMap = undefined;
   let localModel: Map<string, string> = new Map<string, string>();
   const shareData = async (data: Map<string, string>) => {
-    sharedMap = await initMap(undefined);
+    sharedMap = await initMap(undefined, process.env.FLUID_MODE as FluidMode);
     const binder = sharedMap.getBufferingBinder();
     binder.bindOnChange(
       (key: string, value: string) => {
@@ -226,7 +232,7 @@ describe("shared-tree map:: batched binder", () => {
   let sharedMap: SharedTreeMap = undefined;
   let localModel: Map<string, string> = new Map<string, string>();
   const shareData = async (data: Map<string, string>) => {
-    sharedMap = await initMap(undefined);
+    sharedMap = await initMap(undefined, process.env.FLUID_MODE as FluidMode);
     const binder = sharedMap.getBatchingBinder();
     binder.bindOnBatch((batch: MapOperation[]) => {
       for (const op of batch) {
@@ -301,6 +307,7 @@ describe("shared-tree map:: test pad for crash detection", () => {
   const shareData = async (data: Map<string, string>) => {
     sharedMap = await initMap(
       undefined,
+      process.env.FLUID_MODE as FluidMode,
       new CrashHandler(() => {
         process.exit(1);
       })
@@ -371,6 +378,7 @@ describe("shared-tree map:: test pad for crash detection", () => {
     const mapId = await shareData(data);
     remoteMap = await initMap(
       mapId,
+      process.env.FLUID_MODE as FluidMode,
       new CrashHandler(() => {
         process.exit(1);
       })

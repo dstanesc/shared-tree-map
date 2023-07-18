@@ -14,7 +14,7 @@ Author data
 
 ```ts
 import { initMap } from "@dstanesc/shared-tree-map";
-const sharedMap = await initMap(mapId);
+const sharedMap = await initMap(mapId, "tiny");
 sharedMap.set("key1", "abc");
 sharedMap.set("key2", "def");
 sharedMap.delete("key1");
@@ -24,7 +24,7 @@ Subscribe to changes using the invalidation binder
 
 ```ts
 import { initMap } from "@dstanesc/shared-tree-map";
-const sharedMap = await initMap(mapId);
+const sharedMap = await initMap(mapId, "tiny");
 const binder = sharedMap.getInvalidationBinder();
 binder.bindOnInvalid(() => {
   updateLocalModel(sharedMap.asMap());
@@ -80,23 +80,18 @@ binder.bindOnBatch((batch: MapOperation[]) => {
 
 ## Configure Fluid Service
 
-Configure the Fluid service w/ environment variables `FLUID_MODE=frs|router|tiny`
-
-If `frs` is opted for, set-up both `SECRET_FLUID_TENANT` and `SECRET_FLUID_TOKEN` env. vars. (as configured in your azure service - `Tenant Id` respectively `Primary key` )
+If using `frs` fluidMode, set-up both `SECRET_FLUID_TENANT` and `SECRET_FLUID_TOKEN` env. vars. (as configured in your azure service - `Tenant Id` respectively `Primary key` )
 
 Example
 
 ```
-
-FLUID_MODE=frs
 SECRET_FLUID_TOKEN=xyz
 SECRET_FLUID_TENANT=xyz
-
 ```
 
 ## Build & Test
 
-> Note: npm tests are pre-configured with the `FLUID_MODE=tiny` setting (see `package.json`)
+> Note: npm tests are pre-configured with the `fluidMode=tiny` setting (see `package.json`)
 
 ```sh
 npx tinylicious

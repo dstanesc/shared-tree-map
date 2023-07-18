@@ -246,10 +246,10 @@ export type Entry = {
 
 export async function initMap(
   mapId: string | undefined,
-  logger: ITelemetryBaseLogger | undefined = undefined,
-  fluidMode: FluidMode = process.env.FLUID_MODE as FluidMode
+  fluidMode: FluidMode,
+  logger: ITelemetryBaseLogger | undefined = undefined
 ): Promise<SharedTreeMap> {
-  const workspace = await initWorkspace(mapId, logger, fluidMode);
+  const workspace = await initWorkspace(mapId, fluidMode, logger);
   return {
     mapId: () => workspace.containerId,
     delete: (key: string) => deleteEntry(key, workspace),
@@ -292,10 +292,10 @@ export const EMPTY_TREE: ContextuallyTypedNodeData = {
 
 export async function initWorkspace(
   containerId: string | undefined,
-  logger: ITelemetryBaseLogger | undefined = undefined,
-  fluidMode: FluidMode
+  fluidMode: FluidMode,
+  logger: ITelemetryBaseLogger | undefined = undefined
 ): Promise<Workspace> {
-  const workspace = await createSimpleWorkspace(containerId, logger, fluidMode);
+  const workspace = await createSimpleWorkspace(containerId, fluidMode, logger);
   const tree = workspace.tree;
   tree.storedSchema.update(fullSchemaData);
   if (containerId === undefined) tree.root = EMPTY_TREE;

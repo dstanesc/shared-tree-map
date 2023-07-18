@@ -33,10 +33,10 @@ export interface Workspace {
 
 export function getClient(
   userId: string,
+  mode: FluidMode,
   logger: ITelemetryBaseLogger,
-  mode: FluidMode
 ): AzureClient {
-  console.log(`ENV.FLUID_MODE is ${mode}`);
+  console.log(`fluid mode is ${mode}`);
   switch (mode) {
     case "frs":
       const remoteConnectionConfig: AzureRemoteConnectionConfig = {
@@ -94,15 +94,15 @@ export class CrashHandler implements ITelemetryBaseLogger {
 
 export async function createSimpleWorkspace(
   containerId: string | undefined,
+  mode: FluidMode,
   logger: ITelemetryBaseLogger | undefined = undefined,
-  mode: FluidMode
 ): Promise<Workspace> {
   const createNew = containerId === undefined;
   const treeClass: any = MySharedTree;
   const containerSchema = {
     initialObjects: { tree: treeClass },
   };
-  const client = getClient("benchmark", logger, mode);
+  const client = getClient("benchmark", mode, logger );
   let containerAndServices;
   if (createNew) {
     containerAndServices = await client.createContainer(containerSchema);
