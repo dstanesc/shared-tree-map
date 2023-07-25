@@ -22,7 +22,7 @@ class MySharedTree {
   }
 }
 
-export type FluidMode = "frs" | "tiny";
+export type FluidMode = "frs" | "tiny" | "router";
 
 export interface Workspace {
   containerId: string | undefined;
@@ -34,7 +34,7 @@ export interface Workspace {
 export function getClient(
   userId: string,
   mode: FluidMode,
-  logger: ITelemetryBaseLogger,
+  logger: ITelemetryBaseLogger
 ): AzureClient {
   console.log(`fluid mode is ${mode}`);
   switch (mode) {
@@ -54,6 +54,21 @@ export function getClient(
       console.log(`Connecting to ${process.env.SECRET_FLUID_RELAY}`);
       return new AzureClient({
         connection: remoteConnectionConfig,
+        logger,
+      });
+    case "router": //guesswork, untested
+      const routerConnectionConfig: AzureRemoteConnectionConfig = {
+        type: "remote",
+        tenantId: "fluid",
+        tokenProvider: new InsecureTokenProvider(
+          "create-new-tenants-if-going-to-production",
+          { id: userId, name: userId }
+        ),
+        endpoint: "http://localhost:3003",
+      };
+      console.log(`Connecting to ${routerConnectionConfig.endpoint}`);
+      return new AzureClient({
+        connection: routerConnectionConfig,
         logger,
       });
     default:
@@ -95,14 +110,14 @@ export class CrashHandler implements ITelemetryBaseLogger {
 export async function createSimpleWorkspace(
   containerId: string | undefined,
   mode: FluidMode,
-  logger: ITelemetryBaseLogger | undefined = undefined,
+  logger: ITelemetryBaseLogger | undefined = undefined
 ): Promise<Workspace> {
   const createNew = containerId === undefined;
   const treeClass: any = MySharedTree;
   const containerSchema = {
     initialObjects: { tree: treeClass },
   };
-  const client = getClient("benchmark", mode, logger );
+  const client = getClient("benchmark", mode, logger);
   let containerAndServices;
   if (createNew) {
     containerAndServices = await client.createContainer(containerSchema);
